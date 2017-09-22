@@ -17,5 +17,5 @@ You are only authorized to use PSAmsi (and payloads created with PSAmsi) on syst
 # Acknowledgements
 
 A huge thanks to the following people whose code is used by PSAmsi:
-* Daniel Bohannon ([@danielhbohannon](https://twitter.com/danielhbohannon)) - PSAmsi currently uses Invoke-Obfuscation for *all* of it's obfuscation. Thanks Daniel!
-* Matt Graeber ([@mattifestation](https://twitter.com/mattifestation)) - PSAmsi uses PSReflect to call the AMSI functions exported from the AMSI dll, while staying in memory. Thanks Matt!
+* Daniel Bohannon ([@danielhbohannon](https://twitter.com/danielhbohannon)) - PSAmsi currently uses [Invoke-Obfuscation](https://github.com/danielbohannon/Invoke-Obfuscation) for *all* of it's obfuscation. Thanks Daniel!
+* Matt Graeber ([@mattifestation](https://twitter.com/mattifestation)) - PSAmsi uses [PSReflect](https://github.com/mattifestation/PSReflect) to call the AMSI functions exported from the AMSI dll, while staying in memory. Thanks Matt!
