@@ -4,7 +4,7 @@
     $Module = New-InMemoryModule -ModuleName AMSI
 
     $FunctionDefinitions = @(
-       (func amsi AmsiInitialize ([UInt32]) @(
+        (func amsi AmsiInitialize ([UInt32]) @(
             [String],                # _In_  LPCWSTR      appName,
             [IntPtr].MakeByRefType() # _Out_ HAMSICONTEXT *amsiContext
         ) -EntryPoint AmsiInitialize -SetLastError),
