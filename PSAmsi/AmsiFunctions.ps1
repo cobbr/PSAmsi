@@ -5,39 +5,39 @@
 
     $FunctionDefinitions = @(
        (func amsi AmsiInitialize ([UInt32]) @(
-            [String],               # _In_  LPCWSTR      appName,
-            [Int64].MakeByRefType() # _Out_ HAMSICONTEXT *amsiContext
+            [String],                # _In_  LPCWSTR      appName,
+            [IntPtr].MakeByRefType() # _Out_ HAMSICONTEXT *amsiContext
         ) -EntryPoint AmsiInitialize -SetLastError),
 
         (func amsi AmsiUninitialize ([Void]) @(
-            [IntPtr]                # _In_ HAMSICONTEXT amsiContext
+            [IntPtr]                 # _In_ HAMSICONTEXT amsiContext
         ) -EntryPoint AmsiUninitialize -SetLastError),
 
         (func amsi AmsiOpenSession ([UInt32]) @(
-            [IntPtr],               # _In_  HAMSICONTEXT  amsiContext
-            [Int64].MakeByRefType() # _Out_ HAMSISESSION  *session
+            [IntPtr],                # _In_  HAMSICONTEXT  amsiContext
+            [IntPtr].MakeByRefType() # _Out_ HAMSISESSION  *session
         ) -EntryPoint AmsiOpenSession -SetLastError),
 
         (func amsi AmsiCloseSession ([Void]) @(
-            [IntPtr],               # _In_ HAMSICONTEXT amsiContext
-            [IntPtr]                # _In_ HAMSISESSION session
+            [IntPtr],                # _In_ HAMSICONTEXT amsiContext
+            [IntPtr]                 # _In_ HAMSISESSION session
         ) -EntryPoint AmsiCloseSession -SetLastError),
 
         (func amsi AmsiScanBuffer ([UInt32]) @(
-            [IntPtr],               # _In_     HAMSICONTEXT amsiContext
-            [IntPtr],               # _In_     PVOID        buffer
-            [UInt32],               # _In_     ULONG        length
-            [String],               # _In_     LPCWSTR      contentName
-            [IntPtr],               # _In_opt_ HAMSISESSION session
-            [Int32].MakeByRefType() # _Out_    AMSI_RESULT  *result
+            [IntPtr],                # _In_     HAMSICONTEXT amsiContext
+            [IntPtr],                # _In_     PVOID        buffer
+            [UInt32],                # _In_     ULONG        length
+            [String],                # _In_     LPCWSTR      contentName
+            [IntPtr],                # _In_opt_ HAMSISESSION session
+            [IntPtr].MakeByRefType() # _Out_    AMSI_RESULT  *result
         ) -EntryPoint AmsiScanBuffer -SetLastError),
 
         (func amsi AmsiScanString ([UInt32]) @(
-            [IntPtr],               # _In_     HAMSICONTEXT amsiContext
-            [String],               # _In_     LPCWSTR      string
-            [String],               # _In_     LPCWSTR      contentName
-            [IntPtr],               # _In_opt_ HAMSISESSION session
-            [Int32].MakeByRefType() # _Out_    AMSI_RESULT  *result
+            [IntPtr],                # _In_     HAMSICONTEXT amsiContext
+            [String],                # _In_     LPCWSTR      string
+            [String],                # _In_     LPCWSTR      contentName
+            [IntPtr],                # _In_opt_ HAMSISESSION session
+            [IntPtr].MakeByRefType() # _Out_    AMSI_RESULT  *result
         ) -EntryPoint AmsiScanString -SetLastError)
     )
 
