@@ -237,7 +237,7 @@
     }
 
     [Bool] TestEicarDetection() {
-        $Test = ("Y6P`"Q&ABQ\5]Q[Y65)Q_*8DD*8~%FJDBS.TUBOEBSE.BOUJWJSVT.UFTU.GJMF`"%I,I+".ToCharArray() | % { (($_ -as [Int]) + 1) -as [Char]}) -join ""
+        $Test = ("Y6P`"Q&ABQ\5]Q[Y65)Q_*8DD*8~%FJDBS.TUBOEBSE.BOUJWJSVT.UFTU.GJMF`"%I,I+".ToCharArray() | % { (($_ -as [Int]) - 1) -as [Char]}) -join ""
         return $this.GetPSAmsiScanResult($Test)
     }
 
