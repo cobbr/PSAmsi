@@ -384,14 +384,13 @@ function Find-AmsiAstSignatures {
                 ($PSAmsiScanner.GetPSAmsiScanResult($ast.Extent.Text))
             )
         }, $True) | Sort-Object { $_.Extent.Text.Length }
-
         # Need to find 'leaves' of detected tree to get the real signatures
         $NonDuplicates = @()
         ForEach ($AmsiAstSignature in $AmsiAstSignatures) {
             $Duplicate = $False
             ForEach ($NonDuplicate in $NonDuplicates) {
                 If ($AmsiAstSignature.Extent.Text.Contains($NonDuplicate.Extent.Text) -AND
-                   ($AmsiAstSignatures.Extent.Text.Length -ne $NonDuplicate.Extent.Text.Length)) {
+                   ($AmsiAstSignature.Extent.Text.Length -ne $NonDuplicate.Extent.Text.Length)) {
                     $Duplicate = $True
                     break
                 }

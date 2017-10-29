@@ -987,20 +987,13 @@ function Out-ObfuscatedScriptBlockAst {
             If ($AbstractSyntaxTree.EndBlock) { $FunctionDefinitionBlocks += $AbstractSyntaxTree.EndBlock }
 
             If ($Children.Count -eq 2 -AND $Children[0].GetType().Name -eq 'ParamBlockAst' -AND $Children[1].GetType().Name -eq 'NamedBlockAst' -AND $Children[1] -eq $AbstractSyntaxTree.EndBlock) {
-                Write-Verbose "[Out-ObfuscatedScriptBlockAst] Encountered ParamBlockAst nonsense. Real children are:"
-                [System.Management.Automation.Language.Ast[]] $RealChildren = @()
-                $RealChildren += $Children[0]
+                [System.Management.Automation.Language.Ast[]] $RealChildren = ($Children[0]) -as [array]
                 $RealChildren += (Get-AstChildren -Ast $Children[1] | ? { $_.Extent.StartScriptPosition.GetType().Name -ne 'EmptyScriptPosition' } | Sort-Object { $_.Extent.StartOffset }) -as [array]
-                ForEach ($Child in $RealChildren) {
-                    Write-Verbose "[Out-ObfuscatedScriptBlockAst] RealChildExtent: $($Child.Extent.Text)"
-                }
                 Out-ObfuscatedChildrenAst -AbstractSyntaxTree $AbstractSyntaxTree -ChildrenAsts $RealChildren
             }
             ElseIf ($FunctionDefinitionBlocks.Count -gt 1) {
                 $Children = $Children | Sort-Object { $_.Extent.StartOffset }
-                Write-Verbose "[Out-ObfuscatedScriptBlockAst] BeforeReordering: $($AbstractSyntaxTree.Extent.Text)"
                 $Reordered  = Out-ObfuscatedAstsReordered -ParentAst $AbstractSyntaxTree -ChildrenAsts ($FunctionDefinitionBlocks | Sort-Object { $_.Extent.StartOffset })
-                Write-Verbose "[Out-ObfuscatedScriptBlockAst] AfterReordering: $($Reordered)"
 
                 If ($AbstractSyntaxTree.ParamBlock) {
                     $ObfuscatedParamBlock = Out-ObfuscatedAst -AbstractSyntaxTree $AbstractSyntaxTree.ParamBlock
@@ -4862,7 +4855,7 @@ function Out-ParenthesizedString {
     )
     Process {
         Write-Verbose "[Out-ParenthesizedString]"
-        $TrimmedString = $String.Trim()
+        $TrimmedString = $ScriptString.Trim()
         If ($TrimmedString.StartsWith("(") -and $TrimmedString.EndsWith(")")) {
             $StackDepth = 1
             $SurroundingMatch = $True
@@ -4874,10 +4867,10 @@ function Out-ParenthesizedString {
                 }
                 ElseIf ($Char -eq "(") { $StackDepth += 1 }
             }
-            If ($SurroundingMatch) { $String }
-            Else { "(" + $String + ")" }
+            If ($SurroundingMatch) { $ScriptString }
+            Else { "(" + $ScriptString + ")" }
         } Else {
-            "(" + $String + ")"
+            "(" + $ScriptString + ")"
         }
     }
 }
@@ -5068,15 +5061,22 @@ function Out-ObfuscatedChildrenAst {
         If ($ChildrenAsts.Count -gt 0) {
             $ChildrenObfuscatedExtents = ($ChildrenAsts | Out-ObfuscatedAst ) -as [array]
         }
-        $ObfuscatedExtent = $AbstractSyntaxTree.Extent.Text
 
-        For ([Int] $i = 0; $i -lt $ChildrenAsts.Length; $i++) {
-            $LengthDifference = $ObfuscatedExtent.Length - $AbstractSyntaxTree.Extent.Text.Length
-            $EndStartIndex = ($ChildrenAsts[$i].Extent.StartOffset - $AbstractSyntaxTree.Extent.StartOffset) + $ChildrenAsts[$i].Extent.Text.Length
-            $StartLength = ($ChildrenAsts[$i].Extent.StartOffset - $AbstractSyntaxTree.Extent.StartOffset) + $LengthDifference
-            $ObfuscatedExtent = [String] $ObfuscatedExtent.Substring(0, $StartLength)
-            $ObfuscatedExtent += [String] $ChildrenObfuscatedExtents[$i]
-            $ObfuscatedExtent += [String] $AbstractSyntaxTree.Extent.Text.Substring($EndStartIndex)
+        $ObfuscatedExtent = $AbstractSyntaxTree.Extent.Text
+        If ($ChildrenObfuscatedExtents.Count -gt 0 -AND $ChildrenAsts.Count -gt 0 -AND $ChildrenObfuscatedExtents.Count -eq $ChildrenAsts.Count) {
+            For ([Int] $i = 0; $i -lt $ChildrenAsts.Length; $i++) {
+                $LengthDifference = $ObfuscatedExtent.Length - $AbstractSyntaxTree.Extent.Text.Length
+                $EndStartIndex = ($ChildrenAsts[$i].Extent.StartOffset - $AbstractSyntaxTree.Extent.StartOffset) + $ChildrenAsts[$i].Extent.Text.Length
+                $StartLength = ($ChildrenAsts[$i].Extent.StartOffset - $AbstractSyntaxTree.Extent.StartOffset) + $LengthDifference
+                $ObfuscatedExtent = [String] $ObfuscatedExtent.Substring(0, $StartLength)
+                If (-not $ChildrenObfuscatedExtents[$i]) {
+                    $ObfuscatedExtent += [String] $ChildrenAsts[$i].Extent.Text
+                }
+                Else {
+                    $ObfuscatedExtent += [String] $ChildrenObfuscatedExtents[$i]
+                }
+                $ObfuscatedExtent += [String] $AbstractSyntaxTree.Extent.Text.Substring($EndStartIndex)
+            }
         }
         $ObfuscatedExtent
     }
