@@ -21,7 +21,7 @@ PowerShellVersion = '5.0'
 ScriptsToProcess = @('PSReflect.ps1','AmsiFunctions.ps1','PSAmsiScanner.ps1',
                      'Find-AmsiSignatures.ps1'
                      'Invoke-PSAmsiScan.ps1','Start-PSAmsiServer.ps1','Start-PSAmsiClient.ps1',
-                     'Obfuscators\PowerShell\PowerShellObfuscator.ps1', 'Obfuscators\PowerShell\Out-ObfuscatedAst',
+                     'Obfuscators\PowerShell\PowerShellObfuscator.ps1', 'Obfuscators\PowerShell\Out-ObfuscatedAst.ps1',
                      'Obfuscators\PowerShell\Invoke-Obfuscation\Out-ObfuscatedTokenCommand.ps1', 'Obfuscators\PowerShell\Invoke-Obfuscation\Out-ObfuscatedStringCommand.ps1')
 
 # Functions to export from this module
