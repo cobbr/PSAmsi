@@ -6,7 +6,7 @@
     $FunctionDefinitions = @(
         (func amsi AmsiInitialize ([UInt32]) @(
             [String],                # _In_  LPCWSTR      appName,
-            [IntPtr].MakeByRefType() # _Out_ HAMSICONTEXT *amsiContext
+            [Int].MakeByRefType() # _Out_ HAMSICONTEXT *amsiContext
         ) -EntryPoint AmsiInitialize -SetLastError),
 
         (func amsi AmsiUninitialize ([Void]) @(
@@ -15,7 +15,7 @@
 
         (func amsi AmsiOpenSession ([UInt32]) @(
             [IntPtr],                # _In_  HAMSICONTEXT  amsiContext
-            [IntPtr].MakeByRefType() # _Out_ HAMSISESSION  *session
+            [Int].MakeByRefType() # _Out_ HAMSISESSION  *session
         ) -EntryPoint AmsiOpenSession -SetLastError),
 
         (func amsi AmsiCloseSession ([Void]) @(
@@ -37,7 +37,7 @@
             [String],                # _In_     LPCWSTR      string
             [String],                # _In_     LPCWSTR      contentName
             [IntPtr],                # _In_opt_ HAMSISESSION session
-            [IntPtr].MakeByRefType() # _Out_    AMSI_RESULT  *result
+            [Int].MakeByRefType() # _Out_    AMSI_RESULT  *result
         ) -EntryPoint AmsiScanString -SetLastError)
     )
 

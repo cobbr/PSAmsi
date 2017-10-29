@@ -8,7 +8,7 @@
         $this.ObfuscationCache = $ObfuscationCache
     }
 
-    [String] GetMinimallyObfuscated([String] $ScriptString, [Object] $PSAmsiScanner, [String[]] $AmsiSignatures) {
+    [String] GetMinimallyObfuscated([String] $ScriptString, [Object] $PSAmsiScanner, [Object[]] $AmsiSignatures) {
         $CreatedPSAmsiScanner = $False
         If (-not $PSAmsiScanner) {
             $CreatedPSAmsiScanner = $True
@@ -26,11 +26,25 @@
         If (-not $AmsiSignatures) {
             # No need to get the AbstractSyntaxTree unless we must search for AmsiFlaggedStrings
             $AbstractSyntaxTree = Get-Ast -ScriptString $ScriptString
-            $AmsiSignatures = Find-AmsiSignatures -Ast $AbstractSyntaxTree -PSTokens $PSTokens -PSAmsiScanner $PSAmsiScanner
+            $AmsiSignatures = Find-AmsiSignatures -Ast $AbstractSyntaxTree -PSTokens $PSTokens -PSAmsiScanner $PSAmsiScanner | Sort-Object -Descending { $_.Position}
+        }
+
+        $AmsiAstSignatures = @()
+        If ($AmsiSignatures.Count -gt 0) {
+            $AmsiAstSignatures = $AmsiSignatures | ? { $_.SignatureType.Contains('Ast') }
+        }
+        ForEach ($AmsiAstSignature in $AmsiAstSignatures) {
+            If ($this.ObfuscationCache.Contains($AmsiAstSignature.SignatureContent)) { continue }
+            
+            $ObfuscatedAstExtent = Out-ObfuscatedAst -ScriptString $AmsiAstSignature.SignatureContent
+            If (-not (Get-PSAmsiScanResult -ScriptString $ObfuscatedAstExtent -PSAmsiScanner $PSAmsiScanner)) {
+                Write-Verbose "[Get-MinimallyObfuscated] Out-ObfuscatedAst obfuscation successful!"
+                $this.ObfuscationCache[$AmsiAstSignature.SignatureContent] = $ObfuscatedAstExtent
+            } Else { Write-Verbose "[Get-MinimallyObfuscated] Out-ObfuscatedAst obfuscation unsuccessful :(" }
         }
 
         ForEach($AmsiSignature in $AmsiSignatures) {
-            If ($this.ObfuscationCache.Contains($AmsiSignature)) { continue }
+            If ($this.ObfuscationCache.Contains($AmsiSignature.SignatureContent)) { continue }
 
             # Reset the ScriptString for each FlaggedString obfuscation iteration, so token indices are correct
             # We will actually replace w/ all obfuscated values at the end
@@ -42,7 +56,7 @@
                 
                 $ObfuscationLevel++
                 
-                $MatchingTokenArrays = Get-MatchingPSTokens -SearchString $OriginalScript -SignatureString $AmsiSignature -PSTokens $PSTokens
+                $MatchingTokenArrays = Get-MatchingPSTokens -SearchString $OriginalScript -SignatureString $AmsiSignature.SignatureContent -PSTokens $PSTokens
                 
                 # If no matching tokens are found, skip obfuscation
                 If (-not $MatchingTokenArrays) { break }
@@ -107,7 +121,7 @@
         return $this.GetMinimallyObfuscated($ScriptString, $null, $null)
     }
 
-    [String] GetMinimallyObfuscated([ScriptBlock] $ScriptBlock, [Object] $PSAmsiScanner, [String[]] $AmsiSignatures) {
+    [String] GetMinimallyObfuscated([ScriptBlock] $ScriptBlock, [Object] $PSAmsiScanner, [Object[]] $AmsiSignatures) {
         $ScriptString = $ScriptBlock -as [String]
         return $this.GetMinimallyObfuscated($ScriptString, $PSAmsiScanner, $AmsiSignatures)
     }
@@ -120,7 +134,7 @@
         return $this.GetMinimallyObfuscated($ScriptBlock, $null, $null)
     }
 
-    [String] GetMinimallyObfuscated([IO.FileInfo] $ScriptPath, [Object] $PSAmsiScanner, [String[]] $AmsiSignatures) {
+    [String] GetMinimallyObfuscated([IO.FileInfo] $ScriptPath, [Object] $PSAmsiScanner, [Object[]] $AmsiSignatures) {
         $ScriptString = Get-Content $ScriptPath -Raw
         return $this.GetMinimallyObfuscated($ScriptString, $PSAmsiScanner, $AmsiSignatures)
     }
@@ -133,7 +147,7 @@
         return $this.GetMinimallyObfuscated($ScriptPath, $null, $null)
     }
 
-    [String] GetMinimallyObfuscated([Uri] $ScriptUri, [Object] $PSAmsiScanner, [String[]] $AmsiSignatures) {
+    [String] GetMinimallyObfuscated([Uri] $ScriptUri, [Object] $PSAmsiScanner, [Object[]] $AmsiSignatures) {
         $ScriptString = [Net.Webclient]::new().DownloadString($ScriptUri)
         return $this.GetMinimallyObfuscated($ScriptString, $PSAmsiScanner, $AmsiSignatures)
     }
@@ -143,7 +157,7 @@
     }
 
     [String] GetMinimallyObfuscated([Uri] $ScriptUri) {
-        $ScriptString = (Invoke-WebRequest $ScriptUri).Content
+        $ScriptString = [Net.Webclient]::new().DownloadString($ScriptUri)
         return $this.GetMinimallyObfuscated($ScriptString, $null, $null)
     }
 }

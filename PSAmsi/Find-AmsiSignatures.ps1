@@ -89,7 +89,9 @@
         [Uri] $ScriptUri,
 
         [ValidateScript({$_.GetType().Name -eq 'PSAmsiScanner'})]
-        [System.Object] $PSAmsiScanner
+        [System.Object] $PSAmsiScanner,
+
+        [Switch] $Unique
     )
     Begin {
         $CreatedPSAmsiScanner = $False
@@ -100,47 +102,31 @@
     }
     Process {
         If ($ScriptString) {
-            $AmsiFlaggedAsts = Find-AmsiAstSignatures -ScriptString $ScriptString -PSAmsiScanner $PSAmsiScanner
-            $AmsiFlaggedCommentTokens = Find-AmsiPSTokenSignatures -ScriptString $ScriptString -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
+            $AmsiAstSignatures = Find-AmsiAstSignatures -ScriptString $ScriptString -PSAmsiScanner $PSAmsiScanner
+            $AmsiPSTokenSignatures = Find-AmsiPSTokenSignatures -ScriptString $ScriptString -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
         } ElseIf ($ScriptBlock) {
-            $AmsiFlaggedAsts = Find-AmsiAstSignatures -ScriptBlock $ScriptBlock -PSAmsiScanner $PSAmsiScanner
-            $AmsiFlaggedCommentTokens = Find-AmsiPSTokenSignatures -ScriptBlock $ScriptBlock -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
+            $AmsiAstSignatures = Find-AmsiAstSignatures -ScriptBlock $ScriptBlock -PSAmsiScanner $PSAmsiScanner
+            $AmsiPSTokenSignatures = Find-AmsiPSTokenSignatures -ScriptBlock $ScriptBlock -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
         } ElseIf ($ScriptPath) {
-            $AmsiFlaggedAsts = Find-AmsiAstSignatures -ScriptPath $ScriptPath -PSAmsiScanner $PSAmsiScanner
-            $AmsiFlaggedCommentTokens = Find-AmsiPSTokenSignatures -ScriptPath $ScriptPath -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
+            $AmsiAstSignatures = Find-AmsiAstSignatures -ScriptPath $ScriptPath -PSAmsiScanner $PSAmsiScanner
+            $AmsiPSTokenSignatures = Find-AmsiPSTokenSignatures -ScriptPath $ScriptPath -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
         } ElseIf ($ScriptUri) {
-            $AmsiFlaggedAsts = Find-AmsiAstSignatures -ScriptUri $ScriptUri -PSAmsiScanner $PSAmsiScanner
-            $AmsiFlaggedCommentTokens = Find-AmsiPSTokenSignatures -ScriptUri $ScriptUri -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
+            $AmsiAstSignatures = Find-AmsiAstSignatures -ScriptUri $ScriptUri -PSAmsiScanner $PSAmsiScanner
+            $AmsiPSTokenSignatures = Find-AmsiPSTokenSignatures -ScriptUri $ScriptUri -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
         } ElseIf ($AbstractSyntaxTree -and $PSTokens) {
-            $AmsiFlaggedAsts = Find-AmsiAstSignatures -AbstractSyntaxTree $AbstractSyntaxTree -PSAmsiScanner $PSAmsiScanner
-            $AmsiFlaggedCommentTokens = Find-AmsiPSTokenSignatures -PSTokens $PSTokens -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
+            $AmsiAstSignatures = Find-AmsiAstSignatures -AbstractSyntaxTree $AbstractSyntaxTree -PSAmsiScanner $PSAmsiScanner
+            $AmsiPSTokenSignatures = Find-AmsiPSTokenSignatures -PSTokens $PSTokens -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
         }
-
-        # Create objects with the flagged string and it's position within the script
-        $AmsiFlaggedObjs = $AmsiFlaggedAsts | % { [PSCustomObject] @{ Content = $_.Extent.Text; Position = $_.Extent.StartOffset } }
-        $AmsiFlaggedObjs += $AmsiFlaggedCommentTokens | % { [PSCustomObject] @{ Content = $_.Content; Position = $_.Start } }
-
-        # Sort the flagged strings by length, to make de-duplication easier
-        $AmsiFlaggedObjs = $AmsiFlaggedObjs | Sort-Object { $_.Content.Length }
-
-        # Add strings to array one at a time, only adding if the new string
-        # is not contained by a string already present in array.
-        # TODO possibly make this better by finding parent asts and eliminating. And tokens don't really need this treatment, right?
-        $NonDuplicates = @()
-        ForEach ($AmsiFlaggedObj in $AmsiFlaggedObjs) {
-            $Duplicates = $NonDuplicates | ? { $AmsiFlaggedObj.Content.Contains($_.Content) }
-            If ($Duplicates.Count -eq 0) {
-                $NonDuplicates += $AmsiFlaggedObj
-            }
-        }
-
-        # Sort by descending position in ScriptString, to make obfuscation easier
-        $NonDuplicates | Sort-Object -Descending { $_.Position} | % { $_.Content }
+        # Create AmsiSignature objects
+        $AmsiAstSignatures = ($AmsiAstSignatures | % { [PSCustomObject] @{ SignatureType = $_.GetType().Name; SignatureContent = $_.Extent.Text; Position = $_.Extent.StartOffset } }) -as [array] 
+        $AmsiPSTokenSignatures = ($AmsiPSTokenSignatures | % { [PSCustomObject] @{ SignatureType = $_.GetType().Name; SignatureContent = $_.Content; Position = $_.Start; } }) -as [array]
+        $AmsiSignatures = $AmsiAstSignatures + $AmsiPSTokenSignatures
+        
+        If ($Unique) { $AmsiSignatures | Sort-Object -Unique { $_.SignatureContent } }
+        Else { $AmsiSignatures }
     }
     End {
-        If ($CreatedPSAmsiScanner) {
-            $PSAmsiScanner.Dispose()
-        }
+        If ($CreatedPSAmsiScanner) { $PSAmsiScanner.Dispose() }
     }
 }
 
@@ -370,6 +356,7 @@ function Find-AmsiAstSignatures {
         [ValidateScript({$_.Scheme -match 'http|https'})]
         [Uri] $ScriptUri,
 
+        [Parameter(Position = 1)]
         [ValidateScript({$_.GetType().Name -eq 'PSAmsiScanner'})]
         [System.Object] $PSAmsiScanner
     )
@@ -388,7 +375,7 @@ function Find-AmsiAstSignatures {
         ElseIf ($ScriptPath) { $AbstractSyntaxTree = Get-Ast -ScriptPath $ScriptPath }
         ElseIf ($ScriptUri) { $AbstractSyntaxTree = Get-Ast -ScriptUri $ScriptUri }
         
-        $AbstractSyntaxTree.FindAll(
+        $AmsiAstSignatures = $AbstractSyntaxTree.FindAll(
         {
             param($ast) (
                 # This Ast has text
@@ -396,12 +383,27 @@ function Find-AmsiAstSignatures {
                 # And it is flagged by AMSI
                 ($PSAmsiScanner.GetPSAmsiScanResult($ast.Extent.Text))
             )
-        }, $True)
+        }, $True) | Sort-Object { $_.Extent.Text.Length }
+
+        # Need to find 'leaves' of detected tree to get the real signatures
+        $NonDuplicates = @()
+        ForEach ($AmsiAstSignature in $AmsiAstSignatures) {
+            $Duplicate = $False
+            ForEach ($NonDuplicate in $NonDuplicates) {
+                If ($AmsiAstSignature.Extent.Text.Contains($NonDuplicate.Extent.Text) -AND
+                   ($AmsiAstSignatures.Extent.Text.Length -ne $NonDuplicate.Extent.Text.Length)) {
+                    $Duplicate = $True
+                    break
+                }
+            }
+            If (-not $Duplicate) {
+                $NonDuplicates += $AmsiAstSignature
+            }
+        }
+        $NonDuplicates -as [array]
     }
     End {
-        If ($CreatedPSAmsiScanner) {
-            $PSAmsiScanner.Dispose()
-        }
+        If ($CreatedPSAmsiScanner) { $PSAmsiScanner.Dispose() }
     }
 }
 
@@ -545,9 +547,7 @@ function Test-ContainsAmsiAstSignatures {
         Else { $False }
     }
     End {
-        If ($CreatedPSAmsiScanner) {
-            $PSAmsiScanner.Dispose()
-        }
+        If ($CreatedPSAmsiScanner) { $PSAmsiScanner.Dispose() }
     }
 }
 
@@ -667,11 +667,12 @@ function Find-AmsiPSTokenSignatures {
         [System.Management.Automation.PSTokenType[]] $FilterPSTokenTypes = @('String', 'Member', 'CommandArgument', 'Command', 'Variable', 'Type', 'Comment')
     )
     Begin {
+        $CreatedPSAmsiScanner = $False
         If (-not $PSAmsiScanner) {
             $PSAmsiScanner = New-PSAmsiScanner
+            $CreatedPSAmsiScanner = $True
         }
     }
-
     Process {
         # Get the PSTokens that represent the script, if not provided
         If ($ScriptString) { $PSTokens = Get-PSTokens -ScriptString $ScriptString }
@@ -679,11 +680,13 @@ function Find-AmsiPSTokenSignatures {
         ElseIf ($ScriptPath) { $PSTokens = Get-PSTokens -ScriptPath $ScriptPath }
         ElseIf ($ScriptUri) { $PSTokens = Get-PSTokens -ScriptUri $ScriptUri }
 
-        # Filter given tokens by type, and check if Token content is flagged by AMSI
-        $AmsiFlaggedPSTokens = $PSTokens | ? { $_.Type -in $FilterPSTokenTypes } | ? { $PSAmsiScanner.GetPSAmsiScanResult($_.Content) }
-        $AmsiFlaggedPSTokens
+        # Filter given tokens by type, and check if PSToken content is flagged by AMSI
+        $AmsiPSTokenSignatures = $PSTokens | ? { $_.Type -in $FilterPSTokenTypes } | ? { $PSAmsiScanner.GetPSAmsiScanResult($_.Content) }
+        $AmsiPSTokenSignatures -as [array]
     }
-
+    End {
+        If ($CreatedPSAmsiScanner) { $PSAmsiScanner.Dispose() }
+    }
 }
 
 function Test-ContainsAmsiPSTokenSignatures {
@@ -803,11 +806,12 @@ function Test-ContainsAmsiPSTokenSignatures {
         [System.Management.Automation.PSTokenType[]] $FilterPSTokenTypes = @('String', 'Member', 'CommandArgument', 'Command', 'Variable', 'Type', 'Comment')
     )
     Begin {
+        $CreatedPSAmsiScanner = $False
         If (-not $PSAmsiScanner) {
             $PSAmsiScanner = New-PSAmsiScanner
+            $CreatedPSAmsiScanner = $True
         }
     }
-
     Process {
         # Get the PSTokens that represent the script, if not provided
         If ($ScriptString) { $PSTokens = Get-PSTokens -ScriptString $ScriptString }
@@ -816,15 +820,14 @@ function Test-ContainsAmsiPSTokenSignatures {
         ElseIf ($ScriptUri) { $PSTokens = Get-PSTokens -ScriptUri $ScriptUri }
 
         # Filter given tokens by type, and check if Token content is flagged by AMSI
-        $AmsiFlaggedPSTokens = $PSTokens | ? { $_.Type -in $FilterPSTokenTypes } | % { 
+        $PSTokens | ? { $_.Type -in $FilterPSTokenTypes } | % { 
             $Result = $PSAmsiScanner.GetPSAmsiScanResult($_.Content)
-            If ($Result) {
-                $True
-                break
-            }
+            If ($Result) { $True; break }
         }
     }
-
+    End {
+        If ($CreatedPSAmsiScanner) { $PSAmsiScanner.Dispose() }
+    }
 }
 
 function Get-Ast {
