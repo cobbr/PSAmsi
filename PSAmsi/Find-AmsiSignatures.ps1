@@ -389,9 +389,10 @@ function Find-AmsiAstSignatures {
         ForEach ($AmsiAstSignature in $AmsiAstSignatures) {
             $Duplicate = $False
             ForEach ($NonDuplicate in $NonDuplicates) {
-                If ($AmsiAstSignature.Extent.Text.Contains($NonDuplicate.Extent.Text) -AND
-                   ($AmsiAstSignature.Extent.Text.Length -ne $NonDuplicate.Extent.Text.Length)) {
-                    $Duplicate = $True
+                If ($AmsiAstSignature.Extent.Text.Contains($NonDuplicate.Extent.Text)) {
+                    If (-not ($AmsiAstSignature.Extent.Text.Length -eq $NonDuplicate.Extent.Text.Length -AND $AmsiAstSignature.Extent.StartOffset -ne $NonDuplicate.Extent.StartOffset)) {
+                        $Duplicate = $True
+                    }
                     break
                 }
             }
