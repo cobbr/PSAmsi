@@ -248,7 +248,11 @@ function AmsiScanString {
     $HResult = $amsi::AmsiScanString($amsiContext, $string, $contentName, $session, $result)
 
     If ($HResult -ne 0) {
-        throw "AmsiScanString Error: $($HResult)"
+        $ErrorMessage = "AmsiScanString Error: $($HResult)"
+        If ($HResult -eq 2147942421) {
+            $ErrorMessage += ". If the AmsiInitialize and AmsiOpenSession functions succeeded and AmsiScanString fails with error code $($HResult), it is likely that your AMSI AntiMalware Provider is being somewhat deceptive when they say they have implemented AMSI support."
+        }
+        throw $ErrorMessage
     }
 
     $HResult
@@ -336,10 +340,14 @@ function AmsiScanBuffer {
         [ref] $result
     )
 
-    $HResult = $amsi::AmsiScanString($amsiContext, $buffer, $length, $contentName, $session, $result)
+    $HResult = $amsi::AmsiScanBuffer($amsiContext, $buffer, $length, $contentName, $session, $result)
 
     If ($HResult -ne 0) {
-        throw "AmsiScanBuffer Error: $($HResult)"
+        $ErrorMessage = "AmsiScanBuffer Error: $($HResult)"
+        If ($HResult -eq 2147942421) {
+            $ErrorMessage += ". If the AmsiInitialize and AmsiOpenSession functions succeeded and AmsiScanBuffer fails with error code $($HResult), it is likely that your AMSI AntiMalware Provider is being somewhat deceptive when they say they have implemented AMSI support."
+        }
+        throw $ErrorMessage
     }
 
     $HResult

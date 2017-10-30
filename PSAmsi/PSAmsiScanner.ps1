@@ -236,6 +236,11 @@
         return $this.GetPSAmsiScanResult($ScriptUri, $this.PSAmsiScannerAppName)
     }
 
+    [Bool] TestEicarDetection() {
+        $Test = ("Y6P`"Q&ABQ\5]Q[Y65)Q_*8DD*8~%FJDBS.TUBOEBSE.BOUJWJSVT.UFTU.GJMF`"%I,I+".ToCharArray() | % { (($_ -as [Int]) + 1) -as [Char]}) -join ""
+        return $this.GetPSAmsiScanResult($Test)
+    }
+
     [Void] ResetPSAmsiScanCache() {
         $this.ScanCache = @{}
     }
@@ -487,4 +492,55 @@ function Reset-PSAmsiScanCache {
         [System.Object] $PSAmsiScanner
     )
     $PSAmsiScanner.ResetPSAmsiScanCache()
+}
+
+function Test-EicarDetection {
+<#
+    .SYNOPSIS
+
+    Tests if the current AMSI AntiMalware Provider detects a standard test EICAR payload.
+
+    Author: Ryan Cobb (@cobbr_io)
+    License: GNU GPLv3
+    Required Dependecies: PSAmsiScanner
+    Optional Dependencies: none
+
+    .DESCRIPTION
+
+    Test-EicarDetection tests if the current AMSI AntiMalware Provider detects a standard test EICAR payload. If your AMSI AntiMalware
+    Provider does not detect an EICAR payload it is likely that your AMSI AntiMalware Provider is being somewhat deceptive when they say
+    they have implemented AMSI support.
+    
+    .EXAMPLE
+
+    Test-EicarDetection
+
+    .EXAMPLE
+
+    Test-EicarDetection -PSAmsiScanner $Scanner
+
+    .NOTES
+
+    Test-EicarDetection is a part of PSAmsi, a tool for auditing and defeating AMSI signatures.
+
+    PSAmsi is located at https://github.com/cobbr/PSAmsi. Additional information can be found at https://cobbr.io.
+    
+    #>
+
+    Param (
+        [Parameter(Position = 0)] [ValidateNotNull()]
+        [ValidateScript({$_.GetType().Name -eq 'PSAmsiScanner'})]
+        [System.Object] $PSAmsiScanner
+    )
+    $CreatedPSAmsiScanner = $False
+    If (-not $PSAmsiScanner) {
+        $PSAmsiScanner = New-PSAmsiScanner
+        $CreatedPSAmsiScanner = $True
+    }
+
+    $PSAmsiScanner.TestEicarDetection()
+
+    If ($CreatedPSAmsiScanner) {
+        $PSAmsiScanner.Dispose()
+    }
 }
