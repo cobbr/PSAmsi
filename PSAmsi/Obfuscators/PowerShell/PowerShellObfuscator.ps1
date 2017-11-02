@@ -26,7 +26,7 @@
         If (-not $AmsiSignatures) {
             # No need to get the AbstractSyntaxTree unless we must search for AmsiFlaggedStrings
             $AbstractSyntaxTree = Get-Ast -ScriptString $ScriptString
-            $AmsiSignatures = Find-AmsiSignatures -Ast $AbstractSyntaxTree -PSTokens $PSTokens -PSAmsiScanner $PSAmsiScanner | Sort-Object -Descending { $_.Position}
+            $AmsiSignatures = Find-AmsiSignatures -Ast $AbstractSyntaxTree -PSTokens $PSTokens -PSAmsiScanner $PSAmsiScanner | Sort-Object -Descending { $_.StartOffset}
         }
 
         $AmsiAstSignatures = @()

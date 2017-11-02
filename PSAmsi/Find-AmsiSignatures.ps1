@@ -118,8 +118,8 @@
             $AmsiPSTokenSignatures = Find-AmsiPSTokenSignatures -PSTokens $PSTokens -PSAmsiScanner $PSAmsiScanner -FilterPSTokenTypes 'Comment'
         }
         # Create AmsiSignature objects
-        $AmsiAstSignatures = ($AmsiAstSignatures | % { [PSCustomObject] @{ SignatureType = $_.GetType().Name; SignatureContent = $_.Extent.Text; Position = $_.Extent.StartOffset } }) -as [array] 
-        $AmsiPSTokenSignatures = ($AmsiPSTokenSignatures | % { [PSCustomObject] @{ SignatureType = $_.GetType().Name; SignatureContent = $_.Content; Position = $_.Start; } }) -as [array]
+        $AmsiAstSignatures = ($AmsiAstSignatures | % { [PSCustomObject] @{ StartOffset = $_.Extent.StartOffset; SignatureType = $_.GetType().Name; SignatureContent = $_.Extent.Text } }) -as [array] 
+        $AmsiPSTokenSignatures = ($AmsiPSTokenSignatures | % { [PSCustomObject] @{ StartOffset = $_.Start; SignatureType = $_.GetType().Name; SignatureContent = $_.Content; } }) -as [array]
         $AmsiSignatures = $AmsiAstSignatures + $AmsiPSTokenSignatures
         
         If ($Unique) { $AmsiSignatures | Sort-Object -Unique { $_.SignatureContent } }
